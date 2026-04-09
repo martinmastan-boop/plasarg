@@ -248,6 +248,7 @@
 var R = [];
 var etapa = 1;
 var WEBAPP = "https://script.google.com/macros/s/AKfycbzjyhXSM0bT1VYAf3Ag07Q4lOH_X_XCV_N-E_-lzRmsC2XzfjNCBeZ7hqsrG5uJzlJ-/exec";
+var PROXY = "https://api.allorigins.win/get?url=";
 
 function now() { return new Date().toISOString().slice(0,16); }
 ['d-fecha','m-fecha','e-fecha'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=now(); });
@@ -270,43 +271,39 @@ function sincronizar() {
   txt.textContent = 'Sincronizando...';
   errBox.style.display = 'none';
 
-  var old = document.getElementById('_jsonp');
-  if(old) old.parentNode.removeChild(old);
+  var proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(WEBAPP + '?t=' + Date.now());
 
-  window._plasargCB = function(data) {
-    dot.classList.remove('anim');
-    txt.textContent = 'Sincronizar con Plasarg DB';
-    if(!data.ok){ errBox.style.display='block'; errBox.textContent='Error: '+data.error; return; }
-    R = R.filter(function(r){ return r.origen !== 'forms'; });
-    data.retiros.forEach(function(d){
-      R.push({
-        tipo:'retiro', origen:'forms',
-        fecha: d.fecha||"", recolector: d.recolector||"",
-        establecimiento: d.establecimiento||"",
-        tipoMaterial: d.tipo_material||"",
-        kg: parseFloat(d.kg_netos)||0,
-        destino: d.destino_final||"",
-        observaciones: d.observaciones||"",
-        estado: d.estado||"Pendiente descarga",
-        descargado: d.estado !== "Pendiente descarga"
+  fetch(proxyUrl)
+    .then(function(r){ return r.json(); })
+    .then(function(proxyData){
+      var data = JSON.parse(proxyData.contents);
+      dot.classList.remove('anim');
+      txt.textContent = 'Sincronizar con Plasarg DB';
+      if(!data.ok){ errBox.style.display='block'; errBox.textContent='Error: '+data.error; return; }
+      R = R.filter(function(r){ return r.origen !== 'forms'; });
+      data.retiros.forEach(function(d){
+        R.push({
+          tipo:'retiro', origen:'forms',
+          fecha: d.fecha||"", recolector: d.recolector||"",
+          establecimiento: d.establecimiento||"",
+          tipoMaterial: d.tipo_material||"",
+          kg: parseFloat(d.kg_netos)||0,
+          destino: d.destino_final||"",
+          observaciones: d.observaciones||"",
+          estado: d.estado||"Pendiente descarga",
+          descargado: d.estado !== "Pendiente descarga"
+        });
       });
+      var ahora = new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+      document.getElementById('last-sync').textContent = 'Sync: '+ahora+' — '+data.retiros.length+' registros';
+      updDash(); rendPend(); updBadge();
+    })
+    .catch(function(err){
+      dot.classList.remove('anim');
+      txt.textContent = 'Sincronizar con Plasarg DB';
+      errBox.style.display='block';
+      errBox.textContent='No se pudo conectar: ' + err.toString();
     });
-    var ahora = new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
-    document.getElementById('last-sync').textContent = 'Sync: '+ahora+' — '+data.retiros.length+' registros';
-    updDash(); rendPend(); updBadge();
-  };
-
-  var s = document.createElement('script');
-  s.id = '_jsonp';
-  s.src = WEBAPP + '?callback=_plasargCB&t=' + Date.now();
-  s.onerror = function(){
-    dot.classList.remove('anim');
-    txt.textContent = 'Sincronizar con Plasarg DB';
-    errBox.style.display='block';
-    errBox.textContent='No se pudo conectar. Verificá el Web App.';
-  };
-  document.head.appendChild(s);
-  setTimeout(function(){ dot.classList.remove('anim'); txt.textContent='Sincronizar con Plasarg DB'; }, 10000);
 }
 
 function irE(n) {
