@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plasarg — Sistema de Control</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; color: #1a1a1a; min-height: 100vh; }
+    .app { max-width: 480px; margin: 0 auto; padding: 1rem; }
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 0.5px solid #e0e0d8; }
+    .header h1 { font-size: 18px; font-weight: 500; color: #1a1a1a; }
+    .header span { font-size: 11px; color: #888; }
+    .nav { display: flex; gap: 5px; margin-bottom: 1.25rem; overflow-x: auto; padding-bottom: 2px; }
+    .nav button { flex-shrink: 0; padding: 7px 12px; font-size: 12px; border-radius: 8px; border: 0.5px solid #ccc; background: transparent; color: #666; cursor: pointer; white-space: nowrap; }
+    .nav button.active { background: #f0f0e8; color: #1a1a1a; font-weight: 500; border-color: #999; }
+    .section { display: none; }
+    .section.active { display: block; }
+    .card { background: #fff; border: 0.5px solid #e0e0d8; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+    .metric-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; margin-bottom: 1rem; }
+    .metric-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; margin-bottom: 1rem; }
+    .metric { background: #f5f5f0; border-radius: 8px; padding: 10px; text-align: center; }
+    .metric .label { font-size: 10px; color: #888; margin-bottom: 3px; line-height: 1.3; }
+    .metric .value { font-size: 18px; font-weight: 500; color: #1a1a1a; }
+    .metric .unit { font-size: 10px; color: #aaa; }
+    .bal-row { display: flex; justify-content: space-between; font-size: 13px; padding: 5px 0; border-bottom: 0.5px solid #e0e0d8; }
+    .bal-row:last-child { border-bottom: none; }
+    .bal-row.total { font-weight: 500; }
+    .val-in { color: #1D9E75; }
+    .val-out { color: #D85A30; }
+    .val-s { color: #185FA5; }
+    label { font-size: 13px; color: #666; display: block; margin-bottom: 4px; margin-top: 10px; }
+    label:first-child { margin-top: 0; }
+    input, select, textarea { width: 100%; padding: 8px 10px; font-size: 14px; border: 0.5px solid #ccc; border-radius: 8px; background: #fff; color: #1a1a1a; outline: none; }
+    input:focus, select:focus, textarea:focus { border-color: #1D9E75; }
+    input[readonly] { background: #f5f5f0; color: #888; }
+    textarea { resize: vertical; min-height: 50px; }
+    .btn-p { width: 100%; margin-top: 12px; padding: 11px; font-size: 14px; font-weight: 500; border-radius: 8px; border: none; background: #1D9E75; color: #fff; cursor: pointer; }
+    .btn-p:active { opacity: 0.85; }
+    .stitle { font-size: 15px; font-weight: 500; color: #1a1a1a; margin-bottom: 14px; }
+    .stepper { display: flex; align-items: center; margin-bottom: 1.25rem; }
+    .step { display: flex; flex-direction: column; align-items: center; flex: 1; }
+    .sc { width: 28px; height: 28px; border-radius: 50%; border: 0.5px solid #ccc; background: #f5f5f0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; color: #888; }
+    .sc.done { background: #1D9E75; color: #fff; border-color: #1D9E75; }
+    .sc.active { background: #185FA5; color: #fff; border-color: #185FA5; }
+    .sl { font-size: 10px; color: #888; margin-top: 4px; text-align: center; line-height: 1.2; }
+    .sline { flex: 1; height: 0.5px; background: #ccc; margin: 0 4px; margin-bottom: 18px; }
+    .log-item { font-size: 12px; padding: 8px 0; border-bottom: 0.5px solid #e0e0d8; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .log-item:last-child { border-bottom: none; }
+    .log-main { color: #1a1a1a; font-size: 13px; }
+    .log-sub { color: #888; font-size: 11px; margin-top: 2px; }
+    .log-kg { font-weight: 500; color: #1a1a1a; white-space: nowrap; font-size: 13px; }
+    .badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 99px; margin-left: 4px; }
+    .b-forms { background: #E6F1FB; color: #185FA5; }
+    .b-silo { background: #EAF3DE; color: #27500A; }
+    .b-fito { background: #FAECE7; color: #712B13; }
+    .b-desc { background: #EEEDFE; color: #3C3489; }
+    .b-mol { background: #FAEEDA; color: #633806; }
+    .b-emb { background: #FAC775; color: #412402; }
+    .b-venta { background: #FAECE7; color: #993C1D; }
+    .empty { font-size: 13px; color: #aaa; text-align: center; padding: 1.5rem 0; }
+    .info-box { background: #f5f5f0; border-left: 2px solid #185FA5; padding: 8px 12px; margin-top: 10px; font-size: 12px; color: #666; line-height: 1.5; }
+    .sub-step { display: none; }
+    .sub-step.active { display: block; }
+    .pend-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 0.5px solid #e0e0d8; }
+    .pend-item:last-child { border-bottom: none; }
+    .btn-sm { padding: 5px 12px; font-size: 11px; font-weight: 500; border-radius: 8px; border: none; background: #185FA5; color: #fff; cursor: pointer; }
+    .btn-sync { display: flex; align-items: center; gap: 6px; margin-bottom: 1rem; padding: 9px 14px; font-size: 12px; font-weight: 500; border-radius: 8px; border: 0.5px solid #1D9E75; background: #E1F5EE; color: #085041; cursor: pointer; width: 100%; justify-content: center; }
+    .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: #1D9E75; flex-shrink: 0; }
+    .anim { animation: pulse 0.8s linear infinite; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.2} }
+    .last-sync { font-size: 11px; color: #aaa; text-align: center; margin-bottom: 10px; }
+    .emb-row { display: flex; gap: 8px; margin-top: 10px; }
+    .emb-row > div { flex: 1; }
+    .emb-total { background: #f5f5f0; border-radius: 8px; padding: 10px 12px; margin-top: 8px; font-size: 13px; color: #666; }
+    .emb-total span { font-weight: 500; color: #1a1a1a; }
+    .destino-tag { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 99px; margin-left: 4px; background: #E6F1FB; color: #0C447C; }
+    .error-box { background: #FCEBEB; border-left: 2px solid #E24B4A; padding: 8px 12px; font-size: 12px; color: #A32D2D; margin-bottom: 1rem; display: none; line-height: 1.5; border-radius: 0 8px 8px 0; }
+    .etapa-nav { display: flex; gap: 8px; margin-top: 4px; }
+    .etapa-nav button { flex: 1; padding: 8px; font-size: 12px; border: 0.5px solid #ccc; border-radius: 8px; background: transparent; color: #666; cursor: pointer; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>Plasarg</h1>
+    <span id="last-sync">Sin sincronizar</span>
+  </div>
+
+  <nav class="nav">
+    <button class="active" onclick="showTab('dashboard',this)">Dashboard</button>
+    <button onclick="showTab('pendientes',this)">Pendientes <span id="badge-n" style="display:none;background:#D85A30;color:#fff;border-radius:99px;padding:1px 6px;font-size:10px;margin-left:2px;"></span></button>
+    <button onclick="showTab('planta',this)">Planta</button>
+    <button onclick="showTab('ventas',this)">Ventas</button>
+  </nav>
+
+  <!-- DASHBOARD -->
+  <div class="section active" id="tab-dashboard">
+    <div class="error-box" id="error-box"></div>
+    <button class="btn-sync" onclick="sincronizar()">
+      <div class="sync-dot" id="sync-dot"></div>
+      <span id="sync-txt">Sincronizar con Plasarg DB</span>
+    </button>
+    <div class="metric-grid">
+      <div class="metric"><div class="label">Retirado campo</div><div class="value" id="m-ret">0</div><div class="unit">kg</div></div>
+      <div class="metric"><div class="label">Molido</div><div class="value" id="m-mol">0</div><div class="unit">kg</div></div>
+      <div class="metric"><div class="label">Recuperado</div><div class="value" id="m-rec">0</div><div class="unit">kg</div></div>
+    </div>
+    <div class="metric-grid-2">
+      <div class="metric"><div class="label">Silobolsas</div><div class="value" id="m-silo">0</div><div class="unit">kg</div></div>
+      <div class="metric"><div class="label">Fitosanitarios</div><div class="value" id="m-fito">0</div><div class="unit">kg</div></div>
+    </div>
+    <div class="metric-grid-2">
+      <div class="metric"><div class="label">Bolsas 25 kg</div><div class="value" id="m-b25">0</div><div class="unit">unid.</div></div>
+      <div class="metric"><div class="label">Bigbag 1.000 kg</div><div class="value" id="m-bb">0</div><div class="unit">unid.</div></div>
+    </div>
+    <div class="card">
+      <div style="font-size:13px;font-weight:500;margin-bottom:10px;">Balance de kilos</div>
+      <div class="bal-row"><span>Kg retirados de campo</span><span class="val-in" id="b-ret">0 kg</span></div>
+      <div class="bal-row"><span>Pendiente descarga</span><span class="val-s" id="b-pd">0 kg</span></div>
+      <div class="bal-row"><span>Kg descargados</span><span class="val-in" id="b-desc">0 kg</span></div>
+      <div class="bal-row"><span>Pendiente molido</span><span class="val-s" id="b-pm">0 kg</span></div>
+      <div class="bal-row"><span>Kg molidos</span><span class="val-out" id="b-mol">0 kg</span></div>
+      <div class="bal-row"><span>Kg recuperados</span><span class="val-in" id="b-rec">0 kg</span></div>
+      <div class="bal-row"><span>Kg vendidos</span><span class="val-out" id="b-vend">0 kg</span></div>
+      <div class="bal-row total"><span>Stock producto terminado</span><span class="val-s" id="b-stock">0 kg</span></div>
+    </div>
+    <div class="card">
+      <div style="font-size:13px;font-weight:500;margin-bottom:10px;">Últimos movimientos</div>
+      <div id="ultimos"><div class="empty">Sincronizá para ver los retiros</div></div>
+    </div>
+  </div>
+
+  <!-- PENDIENTES -->
+  <div class="section" id="tab-pendientes">
+    <p class="stitle">Pendientes de descarga</p>
+    <button class="btn-sync" onclick="sincronizar()">
+      <div class="sync-dot"></div><span>Actualizar desde Plasarg DB</span>
+    </button>
+    <div class="card" id="lista-pend"><div class="empty">Sincronizá para ver los retiros</div></div>
+  </div>
+
+  <!-- PLANTA -->
+  <div class="section" id="tab-planta">
+    <p class="stitle">Proceso de planta</p>
+    <div class="stepper">
+      <div class="step"><div class="sc active" id="sc1">1</div><div class="sl">Descarga</div></div>
+      <div class="sline"></div>
+      <div class="step"><div class="sc" id="sc2">2</div><div class="sl">Molido / picado / centrifugado</div></div>
+      <div class="sline"></div>
+      <div class="step"><div class="sc" id="sc3">3</div><div class="sl">Recuperado / embolsado</div></div>
+    </div>
+    <div class="sub-step active" id="p1">
+      <div class="card">
+        <div style="font-size:13px;font-weight:500;margin-bottom:10px;color:#185FA5">Etapa 1 — Descarga</div>
+        <label>Retiro a confirmar</label>
+        <select id="d-sel" onchange="onSelDesc()"><option value="">— Seleccioná un retiro pendiente —</option></select>
+        <div class="info-box" id="d-info" style="display:none"></div>
+        <label>Kg confirmados en descarga</label>
+        <input type="number" id="d-kg" placeholder="0" min="0" step="0.1" oninput="calcMerma()">
+        <label>Merma / diferencia</label>
+        <input type="number" id="d-merma" readonly placeholder="0">
+        <label>Operario</label>
+        <input id="d-op" placeholder="Nombre">
+        <label>Fecha y hora</label>
+        <input type="datetime-local" id="d-fecha">
+        <label>Observaciones</label>
+        <textarea id="d-obs"></textarea>
+        <button class="btn-p" onclick="guardarDesc()">Confirmar descarga → Ir a molido</button>
+      </div>
+    </div>
+    <div class="sub-step" id="p2">
+      <div class="card">
+        <div style="font-size:13px;font-weight:500;margin-bottom:10px;color:#854F0B">Etapa 2 — Molido / picado / centrifugado</div>
+        <label>Lote descargado</label>
+        <select id="m-sel" onchange="onSelMol()"><option value="">— Seleccioná un lote —</option></select>
+        <div class="info-box" id="m-info" style="display:none"></div>
+        <label>Kg ingresados al molino</label>
+        <input type="number" id="m-kg" placeholder="0" min="0" step="0.1">
+        <label>Operario</label>
+        <input id="m-op" placeholder="Nombre">
+        <label>Fecha y hora</label>
+        <input type="datetime-local" id="m-fecha">
+        <label>Observaciones</label>
+        <textarea id="m-obs"></textarea>
+        <button class="btn-p" onclick="guardarMol()">Registrar molido → Ir a embolsado</button>
+      </div>
+    </div>
+    <div class="sub-step" id="p3">
+      <div class="card">
+        <div style="font-size:13px;font-weight:500;margin-bottom:10px;color:#633806">Etapa 3 — Recuperado / embolsado</div>
+        <label>Lote molido</label>
+        <select id="e-sel" onchange="onSelEmb()"><option value="">— Seleccioná un lote —</option></select>
+        <div class="info-box" id="e-info" style="display:none"></div>
+        <label>Kg recuperados</label>
+        <input type="number" id="e-kgrec" placeholder="0" min="0" step="0.1">
+        <div style="font-size:13px;font-weight:500;margin-top:14px;margin-bottom:6px;">Embolsado</div>
+        <div class="emb-row">
+          <div><label style="margin-top:0">Bolsas 25 kg</label><input type="number" id="e-b25" placeholder="0" min="0" step="1" oninput="calcEmb()"></div>
+          <div><label style="margin-top:0">Bigbag 1.000 kg</label><input type="number" id="e-bb" placeholder="0" min="0" step="1" oninput="calcEmb()"></div>
+        </div>
+        <div class="emb-total">Total embolsado: <span id="e-tot">0 kg</span></div>
+        <label>Operario</label>
+        <input id="e-op" placeholder="Nombre">
+        <label>Fecha y hora</label>
+        <input type="datetime-local" id="e-fecha">
+        <label>Observaciones</label>
+        <textarea id="e-obs"></textarea>
+        <button class="btn-p" onclick="guardarEmb()">Registrar embolsado</button>
+      </div>
+    </div>
+    <div class="etapa-nav">
+      <button onclick="irE(1)">← Descarga</button>
+      <button onclick="irE(2)">Molido</button>
+      <button onclick="irE(3)">Embolsado →</button>
+    </div>
+  </div>
+
+  <!-- VENTAS -->
+  <div class="section" id="tab-ventas">
+    <p class="stitle">Registrar venta</p>
+    <div class="card">
+      <label>Cliente</label><input id="v-cli" placeholder="Nombre o razón social">
+      <label>Tipo de producto</label>
+      <select id="v-tprod">
+        <option value="PEAD Silobolsas">PEAD — Silobolsas</option>
+        <option value="PEAD Fitosanitarios">PEAD — Fitosanitarios</option>
+        <option value="PEAD Mix">PEAD — Mix</option>
+      </select>
+      <label>Presentación</label>
+      <select id="v-pres" onchange="calcVenta()">
+        <option value="kg">Por kg (granel)</option>
+        <option value="b25">Bolsas 25 kg</option>
+        <option value="bb">Bigbag 1.000 kg</option>
+      </select>
+      <label>Cantidad</label><input type="number" id="v-cant" placeholder="0" min="0" step="1" oninput="calcVenta()">
+      <label>Precio por kg ($)</label><input type="number" id="v-precio" placeholder="0.00" min="0" step="0.01" oninput="calcVenta()">
+      <label>Kg totales</label><input type="number" id="v-kg" readonly placeholder="0">
+      <label>Total ($)</label><input type="number" id="v-total" readonly placeholder="0.00">
+      <label>Fecha</label><input type="date" id="v-fecha">
+      <label>Observaciones</label><textarea id="v-obs"></textarea>
+      <button class="btn-p" onclick="guardarVenta()">Registrar venta</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var R = [];
+var etapa = 1;
+var WEBAPP = "https://script.google.com/macros/s/AKfycbzjyhXSM0bT1VYAf3Ag07Q4lOH_X_XCV_N-E_-lzRmsC2XzfjNCBeZ7hqsrG5uJzlJ-/exec";
+
+function now() { return new Date().toISOString().slice(0,16); }
+['d-fecha','m-fecha','e-fecha'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=now(); });
+document.getElementById('v-fecha').value = now().slice(0,10);
+
+function showTab(t, btn) {
+  document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
+  document.querySelectorAll('.nav button').forEach(function(b){b.classList.remove('active');});
+  document.getElementById('tab-'+t).classList.add('active');
+  btn.classList.add('active');
+  if(t==='planta'){updSels();irE(etapa);}
+  if(t==='pendientes') rendPend();
+}
+
+function sincronizar() {
+  var dot = document.getElementById('sync-dot');
+  var txt = document.getElementById('sync-txt');
+  var errBox = document.getElementById('error-box');
+  dot.classList.add('anim');
+  txt.textContent = 'Sincronizando...';
+  errBox.style.display = 'none';
+
+  var old = document.getElementById('_jsonp');
+  if(old) old.parentNode.removeChild(old);
+
+  window._plasargCB = function(data) {
+    dot.classList.remove('anim');
+    txt.textContent = 'Sincronizar con Plasarg DB';
+    if(!data.ok){ errBox.style.display='block'; errBox.textContent='Error: '+data.error; return; }
+    R = R.filter(function(r){ return r.origen !== 'forms'; });
+    data.retiros.forEach(function(d){
+      R.push({
+        tipo:'retiro', origen:'forms',
+        fecha: d.fecha||"", recolector: d.recolector||"",
+        establecimiento: d.establecimiento||"",
+        tipoMaterial: d.tipo_material||"",
+        kg: parseFloat(d.kg_netos)||0,
+        destino: d.destino_final||"",
+        observaciones: d.observaciones||"",
+        estado: d.estado||"Pendiente descarga",
+        descargado: d.estado !== "Pendiente descarga"
+      });
+    });
+    var ahora = new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('last-sync').textContent = 'Sync: '+ahora+' — '+data.retiros.length+' registros';
+    updDash(); rendPend(); updBadge();
+  };
+
+  var s = document.createElement('script');
+  s.id = '_jsonp';
+  s.src = WEBAPP + '?callback=_plasargCB&t=' + Date.now();
+  s.onerror = function(){
+    dot.classList.remove('anim');
+    txt.textContent = 'Sincronizar con Plasarg DB';
+    errBox.style.display='block';
+    errBox.textContent='No se pudo conectar. Verificá el Web App.';
+  };
+  document.head.appendChild(s);
+  setTimeout(function(){ dot.classList.remove('anim'); txt.textContent='Sincronizar con Plasarg DB'; }, 10000);
+}
+
+function irE(n) {
+  etapa=n;
+  document.querySelectorAll('.sub-step').forEach(function(s){s.classList.remove('active');});
+  document.getElementById('p'+n).classList.add('active');
+  [1,2,3].forEach(function(i){ var c=document.getElementById('sc'+i); c.className='sc'; if(i<n)c.classList.add('done'); else if(i===n)c.classList.add('active'); });
+}
+
+function tipoTag(t) {
+  if(!t) return '';
+  if(t.indexOf('Silo')>=0) return '<span class="badge b-silo">Silobolsas</span>';
+  if(t.indexOf('Fito')>=0||t.indexOf('Envase')>=0) return '<span class="badge b-fito">Fitosanitarios</span>';
+  return '<span class="badge b-forms">'+t+'</span>';
+}
+
+function updBadge() {
+  var n=R.filter(function(r){return r.tipo==='retiro'&&!r.descargado;}).length;
+  var b=document.getElementById('badge-n');
+  if(n>0){b.style.display='inline';b.textContent=n;}else{b.style.display='none';}
+}
+
+function rendPend() {
+  var pend=R.filter(function(r){return r.tipo==='retiro'&&!r.descargado;});
+  var el=document.getElementById('lista-pend');
+  if(!pend.length){el.innerHTML='<div class="empty">No hay retiros pendientes</div>';return;}
+  el.innerHTML=pend.map(function(r){
+    var idx=R.indexOf(r);
+    return '<div class="pend-item"><div><div class="log-main">'+r.establecimiento+tipoTag(r.tipoMaterial)+'</div><div class="log-sub">'+r.recolector+' · '+fmt(r.kg)+' kg'+(r.destino?' · <span class="destino-tag">'+r.destino+'</span>':'')+'</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;"><div class="log-kg">'+fmt(r.kg)+' kg</div><button class="btn-sm" onclick="irDesc('+idx+')">Descargar</button></div></div>';
+  }).join('');
+}
+
+function irDesc(idx) {
+  updSels();
+  document.getElementById('d-sel').value=idx;
+  onSelDesc();
+  document.querySelector('.nav button:nth-child(3)').click();
+  irE(1);
+}
+
+function updSels() {
+  var pd=R.filter(function(r){return r.tipo==='retiro'&&!r.descargado;});
+  var sd=document.getElementById('d-sel');
+  sd.innerHTML='<option value="">— Seleccioná un retiro pendiente —</option>';
+  pd.forEach(function(r){var i=R.indexOf(r);sd.innerHTML+='<option value="'+i+'">'+r.establecimiento+' · '+(r.tipoMaterial||'')+' · '+r.kg+' kg</option>';});
+  var pm=R.filter(function(r){return r.tipo==='descarga'&&!r.molido;});
+  var sm=document.getElementById('m-sel');
+  sm.innerHTML='<option value="">— Seleccioná un lote —</option>';
+  pm.forEach(function(r){var i=R.indexOf(r);sm.innerHTML+='<option value="'+i+'">'+r.establecimiento+' · '+r.kgDesc+' kg</option>';});
+  var pe=R.filter(function(r){return r.tipo==='molido'&&!r.embolsado;});
+  var se=document.getElementById('e-sel');
+  se.innerHTML='<option value="">— Seleccioná un lote —</option>';
+  pe.forEach(function(r){var i=R.indexOf(r);se.innerHTML+='<option value="'+i+'">'+r.establecimiento+' · '+r.kgIn+' kg</option>';});
+}
+
+function onSelDesc() {
+  var idx=document.getElementById('d-sel').value;
+  var info=document.getElementById('d-info');
+  if(idx===''){info.style.display='none';return;}
+  var r=R[idx];
+  info.style.display='block';
+  info.innerHTML='<strong>'+r.establecimiento+'</strong>'+tipoTag(r.tipoMaterial)+'<br>Recolector: '+(r.recolector||'-')+' · Kg declarados: '+r.kg+(r.destino?'<br>Destino: '+r.destino:'')+(r.observaciones?'<br>Obs: '+r.observaciones:'');
+  document.getElementById('d-kg').value=r.kg;
+  calcMerma();
+}
+function calcMerma() {
+  var idx=document.getElementById('d-sel').value;
+  if(idx==='') return;
+  document.getElementById('d-merma').value=(R[idx].kg-(parseFloat(document.getElementById('d-kg').value)||0)).toFixed(1);
+}
+function onSelMol() {
+  var idx=document.getElementById('m-sel').value;
+  var info=document.getElementById('m-info');
+  if(idx===''){info.style.display='none';return;}
+  var r=R[idx];
+  info.style.display='block';
+  info.innerHTML='<strong>'+r.establecimiento+'</strong>'+tipoTag(r.tipoMaterial)+'<br>Kg descargados: '+r.kgDesc+' · Merma: '+fmt(r.merma)+' kg';
+  document.getElementById('m-kg').value=r.kgDesc;
+}
+function onSelEmb() {
+  var idx=document.getElementById('e-sel').value;
+  var info=document.getElementById('e-info');
+  if(idx===''){info.style.display='none';return;}
+  var r=R[idx];
+  info.style.display='block';
+  info.innerHTML='<strong>'+r.establecimiento+'</strong>'+tipoTag(r.tipoMaterial)+'<br>Kg molidos: '+r.kgIn+' kg';
+}
+function calcEmb() {
+  var b25=parseInt(document.getElementById('e-b25').value)||0;
+  var bb=parseInt(document.getElementById('e-bb').value)||0;
+  document.getElementById('e-tot').textContent=((b25*25)+(bb*1000)).toLocaleString('es-AR')+' kg';
+}
+function calcVenta() {
+  var tipo=document.getElementById('v-pres').value;
+  var cant=parseFloat(document.getElementById('v-cant').value)||0;
+  var precio=parseFloat(document.getElementById('v-precio').value)||0;
+  var kg=tipo==='kg'?cant:tipo==='b25'?cant*25:cant*1000;
+  document.getElementById('v-kg').value=kg.toFixed(1);
+  document.getElementById('v-total').value=(kg*precio).toFixed(2);
+}
+function guardarDesc() {
+  var idx=document.getElementById('d-sel').value;
+  if(idx===''){alert('Seleccioná un retiro.');return;}
+  var kd=parseFloat(document.getElementById('d-kg').value)||0;
+  if(kd<=0){alert('Ingresá los kg confirmados.');return;}
+  var ret=R[idx]; ret.descargado=true;
+  R.push({tipo:'descarga',establecimiento:ret.establecimiento,tipoMaterial:ret.tipoMaterial,destino:ret.destino,kgRetiro:ret.kg,kgDesc:kd,merma:ret.kg-kd,operario:document.getElementById('d-op').value.trim(),fecha:document.getElementById('d-fecha').value,obs:document.getElementById('d-obs').value.trim(),molido:false});
+  ['d-op','d-obs','d-kg','d-merma'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('d-info').style.display='none';
+  document.getElementById('d-fecha').value=now();
+  updDash();rendPend();updSels();updBadge();irE(2);
+}
+function guardarMol() {
+  var idx=document.getElementById('m-sel').value;
+  if(idx===''){alert('Seleccioná un lote.');return;}
+  var ki=parseFloat(document.getElementById('m-kg').value)||0;
+  if(ki<=0){alert('Ingresá los kg.');return;}
+  var d=R[idx]; d.molido=true;
+  R.push({tipo:'molido',establecimiento:d.establecimiento,tipoMaterial:d.tipoMaterial,kgIn:ki,operario:document.getElementById('m-op').value.trim(),fecha:document.getElementById('m-fecha').value,obs:document.getElementById('m-obs').value.trim(),embolsado:false});
+  ['m-op','m-obs','m-kg'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('m-info').style.display='none';
+  document.getElementById('m-fecha').value=now();
+  updDash();updSels();irE(3);
+}
+function guardarEmb() {
+  var idx=document.getElementById('e-sel').value;
+  if(idx===''){alert('Seleccioná un lote.');return;}
+  var kr=parseFloat(document.getElementById('e-kgrec').value)||0;
+  var b25=parseInt(document.getElementById('e-b25').value)||0;
+  var bb=parseInt(document.getElementById('e-bb').value)||0;
+  if(kr<=0){alert('Ingresá los kg recuperados.');return;}
+  var m=R[idx]; m.embolsado=true;
+  R.push({tipo:'embolsado',establecimiento:m.establecimiento,tipoMaterial:m.tipoMaterial,kgRec:kr,b25:b25,bb:bb,kgEmb:(b25*25)+(bb*1000),operario:document.getElementById('e-op').value.trim(),fecha:document.getElementById('e-fecha').value,obs:document.getElementById('e-obs').value.trim()});
+  ['e-kgrec','e-b25','e-bb','e-op','e-obs'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('e-info').style.display='none';
+  document.getElementById('e-fecha').value=now();
+  document.getElementById('e-tot').textContent='0 kg';
+  updDash();updSels();alert('Embolsado registrado.');irE(1);
+}
+function guardarVenta() {
+  var cli=document.getElementById('v-cli').value.trim();
+  var kg=parseFloat(document.getElementById('v-kg').value)||0;
+  if(!cli||kg<=0){alert('Completá cliente y cantidad.');return;}
+  R.push({tipo:'venta',cliente:cli,tipoProd:document.getElementById('v-tprod').value,kg:kg,precio:parseFloat(document.getElementById('v-precio').value)||0,total:parseFloat(document.getElementById('v-total').value)||0,fecha:document.getElementById('v-fecha').value,obs:document.getElementById('v-obs').value.trim()});
+  ['v-cli','v-cant','v-precio','v-kg','v-total','v-obs'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('v-fecha').value=now().slice(0,10);
+  updDash();alert('Venta registrada.');
+}
+function updDash() {
+  var ret=R.filter(function(r){return r.tipo==='retiro';}).reduce(function(a,r){return a+r.kg;},0);
+  var silo=R.filter(function(r){return r.tipo==='retiro'&&r.tipoMaterial&&r.tipoMaterial.indexOf('Silo')>=0;}).reduce(function(a,r){return a+r.kg;},0);
+  var fito=R.filter(function(r){return r.tipo==='retiro'&&r.tipoMaterial&&(r.tipoMaterial.indexOf('Fito')>=0||r.tipoMaterial.indexOf('Envase')>=0);}).reduce(function(a,r){return a+r.kg;},0);
+  var desc=R.filter(function(r){return r.tipo==='descarga';}).reduce(function(a,r){return a+r.kgDesc;},0);
+  var mol=R.filter(function(r){return r.tipo==='molido';}).reduce(function(a,r){return a+r.kgIn;},0);
+  var rec=R.filter(function(r){return r.tipo==='embolsado';}).reduce(function(a,r){return a+r.kgRec;},0);
+  var vend=R.filter(function(r){return r.tipo==='venta';}).reduce(function(a,r){return a+r.kg;},0);
+  var b25=R.filter(function(r){return r.tipo==='embolsado';}).reduce(function(a,r){return a+r.b25;},0);
+  var bb=R.filter(function(r){return r.tipo==='embolsado';}).reduce(function(a,r){return a+r.bb;},0);
+  document.getElementById('m-ret').textContent=fmt(ret);
+  document.getElementById('m-mol').textContent=fmt(mol);
+  document.getElementById('m-rec').textContent=fmt(rec);
+  document.getElementById('m-silo').textContent=fmt(silo);
+  document.getElementById('m-fito').textContent=fmt(fito);
+  document.getElementById('m-b25').textContent=b25;
+  document.getElementById('m-bb').textContent=bb;
+  document.getElementById('b-ret').textContent=fmt(ret)+' kg';
+  document.getElementById('b-pd').textContent=fmt(Math.max(0,ret-desc))+' kg';
+  document.getElementById('b-desc').textContent=fmt(desc)+' kg';
+  document.getElementById('b-pm').textContent=fmt(Math.max(0,desc-mol))+' kg';
+  document.getElementById('b-mol').textContent=fmt(mol)+' kg';
+  document.getElementById('b-rec').textContent=fmt(rec)+' kg';
+  document.getElementById('b-vend').textContent=fmt(vend)+' kg';
+  document.getElementById('b-stock').textContent=fmt(Math.max(0,rec-vend))+' kg';
+  var rec5=[...R].reverse().slice(0,5);
+  var el=document.getElementById('ultimos');
+  if(!rec5.length){el.innerHTML='<div class="empty">Sin registros aún</div>';return;}
+  el.innerHTML=rec5.map(function(r){return logRow(r);}).join('');
+}
+function logRow(r) {
+  if(r.tipo==='retiro') return '<div class="log-item"><div><div class="log-main">'+r.establecimiento+'<span class="badge b-forms">Forms</span>'+tipoTag(r.tipoMaterial)+'</div><div class="log-sub">'+r.recolector+(r.destino?' · '+r.destino:'')+' · '+fmtF(r.fecha)+'</div></div><div class="log-kg">'+fmt(r.kg)+' kg</div></div>';
+  if(r.tipo==='descarga') return '<div class="log-item"><div><div class="log-main">'+r.establecimiento+'<span class="badge b-desc">descarga</span></div><div class="log-sub">Merma: '+fmt(r.merma)+' kg · '+fmtF(r.fecha)+'</div></div><div class="log-kg">'+fmt(r.kgDesc)+' kg</div></div>';
+  if(r.tipo==='molido') return '<div class="log-item"><div><div class="log-main">'+r.establecimiento+'<span class="badge b-mol">molido</span></div><div class="log-sub">'+(r.operario||'')+' · '+fmtF(r.fecha)+'</div></div><div class="log-kg">'+fmt(r.kgIn)+' kg</div></div>';
+  if(r.tipo==='embolsado') return '<div class="log-item"><div><div class="log-main">'+r.establecimiento+'<span class="badge b-emb">embolsado</span></div><div class="log-sub">B25: '+r.b25+' · Bigbag: '+r.bb+' · '+fmtF(r.fecha)+'</div></div><div class="log-kg">'+fmt(r.kgRec)+' kg</div></div>';
+  if(r.tipo==='venta') return '<div class="log-item"><div><div class="log-main">'+r.cliente+'<span class="badge b-venta">venta</span></div><div class="log-sub">'+r.tipoProd+' · $'+r.precio+'/kg · '+fmtF(r.fecha)+'</div></div><div class="log-kg">'+fmt(r.kg)+' kg</div></div>';
+  return '';
+}
+function fmt(n){return(Math.round(n*10)/10).toLocaleString('es-AR');}
+function fmtF(str){if(!str)return'';try{var d=new Date(str);if(isNaN(d))return str;return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'});}catch(e){return str;}}
+</script>
+</body>
+</html>
